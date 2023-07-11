@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <Thread.h>
-#include <ThreadController.h>
+// #include <Thread.h>
+// #include <ThreadController.h>
 #include <Wire.h>
 #include <WiFi.h>
 #include <LittleFS.h>
@@ -19,11 +19,14 @@
 #include "NovaIO.h"
 #include "main.h"
 #include "Enable.h"
+#include "Ambient.h"
+#include "LightUtils.h"
 #include "output/Star.h"
 #include "Buttons.h"
 #include "Web.h"
 #include "PersistenceManager.h"
 #include "fileSystemHelper.h"
+#include "Ambient.h"
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
@@ -32,6 +35,8 @@
 PersistenceManager persistenceManager(CONFIG_FILE);
 
 
+void TaskLightUtils(void *pvParameters);
+void TaskAmbient(void *pvParameters);
 void TaskEnable(void *pvParameters);
 void TaskMDNS(void *pvParameters);
 void TaskModes(void *pvParameters);
@@ -41,11 +46,9 @@ void TaskWeb(void *pvParameters);
 DNSServer dnsServer;
 AsyncWebServer webServer(80);
 
-
-
 void setup()
 {
-  delay(1000);
+  delay(500);
   Serial.begin(921600);
   Serial.println("NOVA: CORE");
   Serial.print("setup() is running on core ");
@@ -95,6 +98,12 @@ void setup()
   Serial.println("new Star");
   star = new Star();
 
+  Serial.println("new Ambient");
+  ambient = new Ambient();
+
+  Serial.println("new LightUtils");
+  lightUtils = new LightUtils();
+
   Serial.println("new Buttons");
   buttons = new Buttons();
 
@@ -124,12 +133,20 @@ void setup()
   Serial.println("Create TaskModes - Done");
 
   Serial.println("Create TaskButtons");
-  xTaskCreate(&TaskButtons, "TaskButtons", 2048, NULL, 5, NULL);
+  xTaskCreate(&TaskButtons, "TaskButtons", 4096, NULL, 5, NULL);
   Serial.println("Create TaskButtons - Done");
 
   Serial.println("Create TaskMDNS");
-  xTaskCreate(&TaskButtons, "TaskMDNS", 4098, NULL, 5, NULL);
+  xTaskCreate(&TaskMDNS, "TaskMDNS", 4098, NULL, 5, NULL);
   Serial.println("Create TaskMDNS - Done");
+
+  Serial.println("Create TaskAmbient");
+  xTaskCreate(&TaskAmbient, "TaskAmbient", 6 * 1024, NULL, 5, NULL);
+  Serial.println("Create TaskAmbient - Done");
+
+  Serial.println("Create LightUtils");
+  xTaskCreate(&TaskLightUtils, "LightUtils", 6 * 4096, NULL, 5, NULL);
+  Serial.println("Create LightUtils - Done");
 
   Serial.println("Setup Complete");
 }
@@ -144,6 +161,58 @@ void loop()
 /*--------------------------------------------------*/
 /*---------------------- Tasks ---------------------*/
 /*--------------------------------------------------*/
+
+void TaskAmbient(void *pvParameters) // This is a task.
+{
+  (void)pvParameters;
+  UBaseType_t uxHighWaterMark;
+
+  Serial.println("TaskAmbient is running");
+  while (1) // A Task shall never return or exit.
+  {
+    ambient->loop();
+    yield(); // Should't do anything but it's here incase the watchdog needs it.
+    delay(1);
+
+    // Set this to 'true' to print stack high watermark
+    if (0)
+    {
+      /* Calling the function will have used some stack space, we would
+          therefore now expect uxTaskGetStackHighWaterMark() to return a
+          value lower than when it was called on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.print("TaskAmbient stack free - ");
+      Serial.println(uxHighWaterMark);
+    }
+  }
+}
+
+void TaskLightUtils(void *pvParameters) // This is a task.
+{
+  (void)pvParameters;
+  UBaseType_t uxHighWaterMark;
+
+  Serial.println("TaskLightUtils is running");
+  while (1) // A Task shall never return or exit.
+  {
+    lightUtils->loop();
+    yield(); // Should't do anything but it's here incase the watchdog needs it.
+    yield(); // Should't do anything but it's here incase the watchdog needs it.
+    //delay(1);
+
+    // Set this to 'true' to print stack high watermark
+    if (0)
+    {
+      /* Calling the function will have used some stack space, we would
+          therefore now expect uxTaskGetStackHighWaterMark() to return a
+          value lower than when it was called on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.print("TaskLightUtils stack free - ");
+      Serial.println(uxHighWaterMark);
+    }
+  }
+}
+
 
 void TaskEnable(void *pvParameters) // This is a task.
 {
