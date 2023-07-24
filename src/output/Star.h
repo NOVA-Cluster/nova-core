@@ -4,17 +4,19 @@
 #pragma once
 
 #include <Arduino.h>
+#include "buttons.h"
 
 class Star
 {
 private:
-    bool systemEnable = 1;
+    uint32_t pooferDuration = 100;
 
-    uint8_t disabledBrightness = 0;
-    uint8_t disabledBrightnessFade = 1; // This should be powers of two (1, 2, 4, 8, 16, 32, 64, etc)
-
-    uint32_t pooferIntervalMin = 90;
-    uint32_t pooferIntervalMax = 90;
+    uint32_t boomerTimeBlowerOn = 50;
+    uint32_t boomerTimeFuelOn = 2000;
+    uint32_t boomerTimeFuelOff = 200;
+    uint32_t boomerTimeBomerBlowerOff = 30;
+    uint32_t boomerTimeBomerZap = 100;
+    uint32_t boomerTimeExhaust = 4000;
 
     struct boomerData
     {
@@ -32,8 +34,28 @@ private:
         uint8_t cache_de;
     };
 
+    enum PooferButtonState
+    {
+        POOFER_OFF,
+        POOFER_POOF
+    };
+
+    enum BoomerButtonState
+    {
+        BOOMER_ON,
+        BOOMER_OFF,
+        BOOMER_IDLE
+    };
+    struct starStates
+    {
+        //uint8_t cache_de;
+        PooferButtonState pooferButtonState;
+        BoomerButtonState boomerButtonState;
+    };
+
     struct star
     {
+        starStates starState;
         boomerData boomer;
         novaNet net;
         uint32_t pooferPreviousMillis;
@@ -56,19 +78,14 @@ private:
 
     starCluster cluster;
 
-    uint32_t redPreviousMillis = 0;
-    bool redPooferOn = 0;
-
-    uint32_t greenPreviousMillis = 0;
-    bool greenPooferOn = 0;
-
-    uint32_t bluePreviousMillis = 0;
-    bool bluePooferOn = 0;
-
-    uint32_t yellowPreviousMillis = 0;
-    bool yellowPooferOn = 0;
-
 public:
+
+    uint8_t sequenceRed = 0;
+    uint8_t sequenceGreen = 0;
+    uint8_t sequenceBlue = 0;
+    uint8_t sequenceYellow = 0;
+
+
     enum RedButtonState
     {
         RED_OFF,
@@ -103,81 +120,81 @@ public:
 
     enum PooferStates
     {
-//        POOF_ACTIVE,
-//        POOF_DEACTIVATED,
         POOF_ON,
         POOF_ON_IDLE,
         POOF_OFF,
         POOF_OFF_IDLE
     };
 
-    enum boomerButtonState {
-        BOOMER_ON,
-        BOOMER_OFF,
-        BOOMER_IDLE
-    };
-
     enum BoomerStates
     {
-        BOOMER_ACTIVE, // Boomer is ready for a Boom
-        BOOMER_DEACTIVATED, // Boomer is disabled. Here for administrative purposes.
-        BOOMER_ABORT, // Begin the abort sequence. (Turn off fuel, turn off igniter, enter BOOMER_BLOWER_EXHAUST)
-        BOOMER_BLOWER_ON, // Turn on the blower
-        BOOMER_BLOWER_ON_IDLE, // Wait for x-ms
-        BOOMER_BLOWER_ON_FUEL_ON, // Turn on the fuel fill
-        BOOMER_BLOWER_ON_FUEL_ON_IDLE, // Wait for x-ms
-        BOOMER_BLOWER_ON_FUEL_OFF, // Turn off the fuel fill
+        BOOMER_READY,                   // Boomer is ready for a Boom
+        BOOMER_DEACTIVATED,             // Boomer is disabled. Here for administrative purposes.
+        BOOMER_ABORT,                   // Begin the abort sequence. (Turn off fuel, turn off igniter, enter BOOMER_BLOWER_EXHAUST)
+        BOOMER_BLOWER_ON,               // Turn on the blower
+        BOOMER_BLOWER_ON_IDLE,          // Wait for x-ms
+        BOOMER_BLOWER_ON_FUEL_ON,       // Turn on the fuel fill
+        BOOMER_BLOWER_ON_FUEL_ON_IDLE,  // Wait for x-ms
+        BOOMER_BLOWER_ON_FUEL_OFF,      // Turn off the fuel fill
         BOOMER_BLOWER_ON_FUEL_OFF_IDLE, // Wait for x-ms. Run this for maybe 50ms. This is just to clear the fill tube.
-        BOOMER_BLOWER_OFF, // Turn the blower off
-        BOOMER_BLOWER_OFF_IDLE, // Wait for x-ms. This will let the flap on the baffle close
-        BOOMER_ZAP_ON, // Turn on the igniter
-        BOOMER_ZAP_ON_IDLE, // Leave it on for a moment
-        BOOMER_ZAP_OFF, // Turn the zapper off
-        BOOMER_ZAP_OFF_IDLE, // Wait for a moment (Do we need this?)
-        BOOMER_BLOWER_EXHAUST, // Begin to exhaust the boomer. This can't be aborted.
-        BOOMER_BLOWER_EXHAUST_IDLE, // Boomer exhausting. This can't be aborted.
-        BOOMER_BLOWER_EXHAUST_OFF // Turn the exhaust off.
+        BOOMER_BLOWER_OFF,              // Turn the blower off
+        BOOMER_BLOWER_OFF_IDLE,         // Wait for x-ms. This will let the flap on the baffle close
+        BOOMER_ZAP_ON,                  // Turn on the igniter
+        BOOMER_ZAP_ON_IDLE,             // Leave it on for a moment
+        BOOMER_ZAP_OFF,                 // Turn the zapper off
+        BOOMER_ZAP_OFF_IDLE,            // Wait for a moment (Do we need this?)
+        BOOMER_BLOWER_EXHAUST,          // Begin to exhaust the boomer. This can't be aborted.
+        BOOMER_BLOWER_EXHAUST_IDLE,     // Boomer exhausting. This can't be aborted.
+        BOOMER_BLOWER_EXHAUST_OFF       // Turn the exhaust off.
+    };
+
+    enum StarColors {
+        STAR_RED,
+        STAR_GREEN,
+        STAR_BLUE,
+        STAR_YELLOW
     };
 
     Star();
 
     void loop(void);
 
+    void star_loop(void);
+
+    void poof(uint8_t star);
+    void boom(uint8_t star);
+
     void red_loop(void);
     void green_loop(void);
     void blue_loop(void);
     void yellow_loop(void);
 
-    void redPoof(RedButtonState state);
-    void redBoom(boomerButtonState state);
+    void redPoof();
+    void redBoom();
 
-    void greenPoof(GreenButtonState state);
-    void greenBoom(boomerButtonState state);
+    void greenPoof();
+    void greenBoom();
 
-    void bluePoof(BlueButtonState state);
-    void blueBoom(boomerButtonState state);
+    void bluePoof();
+    void blueBoom();
 
-    void yellowPoof(YellowButtonState state);
-    void yellowBoom(boomerButtonState state);
+    void yellowPoof();
+    void yellowBoom();
 
     void setupStar(void);
 
     bool goPoof(uint8_t star, uint32_t intervalOn, uint32_t intervalOff);
     bool goBoom(uint8_t star);
-    void goBoomAbort(uint8_t star, bool abort);
+    void goBoomAbort(StarColors color, bool abort);
+    void boomAbort(uint8_t star);
 
     bool netOut(uint8_t star);
     bool netIn(uint8_t star);
 
-    uint8_t redPooferState;
-    uint8_t greenPooferState;
-    uint8_t bluePooferState;
-    uint8_t yellowPooferState;
-
-    uint8_t redBoomerState;
-    uint8_t greenBoomerState;
-    uint8_t blueBoomerState;
-    uint8_t yellowBoomerState;
+    bool isBoomerRedActive();
+    bool isBoomerGreenActive();
+    bool isBoomerBlueActive();
+    bool isBoomerYellowActive();
 
 };
 

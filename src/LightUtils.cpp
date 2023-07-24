@@ -3,11 +3,6 @@
 #include "configuration.h"
 #include "main.h"
 
-#define NUM_LEDS 18
-#define LED_TYPE APA102
-#define COLOR_ORDER BGR
-CRGB leds[NUM_LEDS];
-
 CRGBPalette16 currentPalette(CRGB::Black);
 
 CRGBPalette16 targetPalette;
@@ -111,6 +106,13 @@ DEFINE_GRADIENT_PALETTE(bhw1_22_gp){
     188, 30, 10, 1,
     255, 1, 1, 1};
 
+// White dot
+// Used for testing Nova's LEDs
+DEFINE_GRADIENT_PALETTE(white_dot){
+    0, 255, 255, 255,
+    1, 0, 0, 0,
+    255, 0, 0, 0};
+
 LightUtils::LightUtils()
 {
 
@@ -118,13 +120,20 @@ LightUtils::LightUtils()
     FastLED.addLeds<APA102, APA102_DATA, APA102_CLOCK, COLOR_ORDER, DATA_RATE_KHZ(2000)>(leds, NUM_LEDS);
     FastLED.setBrightness(getCfgBrightness());
 
+    // Load the light configuration
     currentPalette = getPalette(manager.get("cfgProgram").as<uint8_t>() ? manager.get("cfgProgram").as<uint8_t>() : 1);
+    cfgSin = getCfgSin();
+    cfgUpdates = getCfgUpdates();
+    cfgFire = getCfgFire();
+    cfgReverse = getCfgReverse();
+    
 
     // Setup goes in here
 }
 
 void LightUtils::loop()
 {
+    //    Serial.println("LightUtils::loop");
     yield();
     // Crossfade current palette slowly toward the target palette
     //
@@ -345,6 +354,47 @@ CRGBPalette16 LightUtils::getPalette(uint32_t paletteSelect)
 
         break;
 
+    case 21:
+
+        fill_solid(targetPalette, 16, CRGB::Red);
+
+        break;
+
+    case 22:
+
+        fill_solid(targetPalette, 16, CRGB::Green);
+
+        break;
+
+    case 23:
+
+        fill_solid(targetPalette, 16, CRGB::Blue);
+
+        break;
+
+    case 24:
+
+        fill_solid(targetPalette, 16, CRGB::Purple);
+
+        break;
+
+    case 25:
+
+        fill_solid(targetPalette, 16, CRGB::Cyan);
+
+        break;
+
+    case 26:
+
+        fill_solid(targetPalette, 16, CRGB::Yellow);
+
+        break;
+
+    case 50:
+
+        targetPalette = white_dot;
+        break;
+
     default:
         break;
     }
@@ -522,4 +572,26 @@ bool LightUtils::getCfgFire(void)
 bool LightUtils::getCfgLocalDisable(void)
 {
     return manager.get("cfgLocalDisable").as<bool>();
+}
+
+/**
+ * Returns a pointer to the array of CRGB objects representing the LED strip.
+ *
+ * @return A pointer to the array of CRGB objects representing the LED strip.
+ */
+CRGB *LightUtils::getLeds(void)
+{
+
+    return leds;
+}
+
+/**
+ * Returns the number of LEDs in the LED strip.
+ *
+ * @return The number of LEDs in the LED strip.
+ */
+uint16_t LightUtils::getNumberOfLeds(void)
+{
+
+    return NUM_LEDS;
 }

@@ -16,13 +16,13 @@ Buttons *buttons = NULL;
 
 Buttons::Buttons()
 {
-    uint32_t ticksDebounce = 25; // setDebounceTicks Period of time in which to ignore additional level changes.
-    uint32_t ticksClicks = 60;   // setClickTicks  Timeout used to distinguish single clicks from double clicks.
-    uint32_t ticksPress = 500;   // setPressTicks Duration to hold a button to trigger a long press
+    uint32_t ticksDebounce = 25; // setDebounceTicks Period of time in which to ignore additional level changes. (Default: 25)
+    uint32_t ticksClicks = 50;   // setClickTicks  Timeout used to distinguish single clicks from double clicks. (Default: 400)
+    uint32_t ticksPress = 800;   // setPressTicks Duration to hold a button to trigger a long press (Default: 800)
 
     Serial.println("Setting up buttons");
     button_red->attachClick(red_click);
-    button_red->attachDoubleClick(red_doubleClick);
+    // button_red->attachDoubleClick(red_doubleClick);
     button_red->attachLongPressStart(red_longPressStart);
     button_red->attachLongPressStop(red_longPressStop);
     button_red->setDebounceTicks(ticksDebounce);
@@ -30,7 +30,7 @@ Buttons::Buttons()
     button_red->setPressTicks(ticksPress);
 
     button_green->attachClick(green_click);
-    button_green->attachDoubleClick(green_doubleClick);
+    // button_green->attachDoubleClick(green_doubleClick);
     button_green->attachLongPressStart(green_longPressStart);
     button_green->attachLongPressStop(green_longPressStop);
     button_green->setDebounceTicks(ticksDebounce);
@@ -38,7 +38,7 @@ Buttons::Buttons()
     button_green->setPressTicks(ticksPress);
 
     button_blue->attachClick(blue_click);
-    button_blue->attachDoubleClick(blue_doubleClick);
+    // button_blue->attachDoubleClick(blue_doubleClick);
     button_blue->attachLongPressStart(blue_longPressStart);
     button_blue->attachLongPressStop(blue_longPressStop);
     button_blue->setDebounceTicks(ticksDebounce);
@@ -46,7 +46,7 @@ Buttons::Buttons()
     button_blue->setPressTicks(ticksPress);
 
     button_yellow->attachClick(yellow_click);
-    button_yellow->attachDoubleClick(yellow_doubleClick);
+    // button_yellow->attachDoubleClick(yellow_doubleClick);
     button_yellow->attachLongPressStart(yellow_longPressStart);
     button_yellow->attachLongPressStop(yellow_longPressStop);
     button_yellow->setDebounceTicks(ticksDebounce);
@@ -60,13 +60,9 @@ void Buttons::loop(void)
     button_green->tick(novaIO->expansionDigitalRead(BUTTON_GREEN_IN) == LOW);
     button_blue->tick(novaIO->expansionDigitalRead(BUTTON_BLUE_IN) == LOW);
     button_yellow->tick(novaIO->expansionDigitalRead(BUTTON_YELLOW_IN) == LOW);
-    button_white->tick(novaIO->expansionDigitalRead(BUTTON_WHITE_IN) == LOW);
+    //button_white->tick(novaIO->expansionDigitalRead(BUTTON_WHITE_IN) == LOW);
 
-    if (novaIO->expansionDigitalRead(BUTTON_RED_IN))
-    {
-        novaIO->ledRed(HIGH);
-    }
-    else
+    if (star->isBoomerRedActive())
     {
         if ((millis() / 100) % 2)
         {
@@ -77,11 +73,12 @@ void Buttons::loop(void)
             novaIO->ledRed(LOW);
         }
     }
-    if (novaIO->expansionDigitalRead(BUTTON_GREEN_IN))
-    {
-        novaIO->ledGreen(HIGH);
-    }
     else
+    {
+        novaIO->ledRed(HIGH);
+    }
+
+    if (star->isBoomerGreenActive())
     {
         if ((millis() / 100) % 2)
         {
@@ -92,12 +89,12 @@ void Buttons::loop(void)
             novaIO->ledGreen(LOW);
         }
     }
-
-    if (novaIO->expansionDigitalRead(BUTTON_BLUE_IN))
-    {
-        novaIO->ledBlue(HIGH);
-    }
     else
+    {
+        novaIO->ledGreen(HIGH);
+    }
+
+    if (star->isBoomerBlueActive())
     {
         if ((millis() / 100) % 2)
         {
@@ -108,12 +105,12 @@ void Buttons::loop(void)
             novaIO->ledBlue(LOW);
         }
     }
-
-    if (novaIO->expansionDigitalRead(BUTTON_YELLOW_IN))
-    {
-        novaIO->ledYellow(HIGH);
-    }
     else
+    {
+        novaIO->ledBlue(HIGH);
+    }
+
+    if (star->isBoomerYellowActive())
     {
         if ((millis() / 100) % 2)
         {
@@ -124,6 +121,10 @@ void Buttons::loop(void)
             novaIO->ledYellow(LOW);
         }
     }
+    else
+    {
+        novaIO->ledYellow(HIGH);
+    }
 }
 
 void Buttons::red_click(void)
@@ -131,20 +132,20 @@ void Buttons::red_click(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Red Click");
-        star->redPoof(star->RED_POOF);
+        star->redPoof();
     }
 }
 void Buttons::red_doubleClick(void)
 {
     Serial.println("Red Double Click");
-    star->redPoof(star->RED_POOF_MULTI);
+    // star->redPoof(star->RED_POOF_MULTI);
 }
 void Buttons::red_longPressStart(void)
 {
     if (!enable->isDrunktard())
     {
         Serial.println("Red Long Start");
-        star->redBoom(star->BOOMER_ON);
+        star->redBoom();
     }
 }
 void Buttons::red_longPressStop(void)
@@ -152,7 +153,7 @@ void Buttons::red_longPressStop(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Red Long Stop");
-        star->goBoomAbort(0, true);
+        star->goBoomAbort(Star::STAR_RED, true);
     }
 }
 
@@ -161,20 +162,20 @@ void Buttons::green_click(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Green Click");
-        star->greenPoof(star->GREEN_POOF);
+        star->greenPoof();
     }
 }
 void Buttons::green_doubleClick(void)
 {
     Serial.println("Green Double Click");
-    star->greenPoof(star->GREEN_POOF_MULTI);
+    // star->greenPoof(star->GREEN_POOF_MULTI);
 }
 void Buttons::green_longPressStart(void)
 {
     if (!enable->isDrunktard())
     {
         Serial.println("Green Long Start");
-        star->greenBoom(star->BOOMER_ON);
+        star->greenBoom();
     }
 }
 void Buttons::green_longPressStop(void)
@@ -182,7 +183,7 @@ void Buttons::green_longPressStop(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Green Long Stop");
-        star->goBoomAbort(1, true);
+        star->goBoomAbort(Star::STAR_GREEN, true);
     }
 }
 
@@ -191,20 +192,20 @@ void Buttons::blue_click(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Blue Click");
-        star->bluePoof(star->BLUE_POOF);
+        star->bluePoof();
     }
 }
 void Buttons::blue_doubleClick(void)
 {
     Serial.println("Blue Double Click");
-    star->bluePoof(star->BLUE_POOF_MULTI);
+    // star->bluePoof(star->BLUE_POOF_MULTI);
 }
 void Buttons::blue_longPressStart(void)
 {
     if (!enable->isDrunktard())
     {
         Serial.println("Blue Long Start");
-        star->blueBoom(star->BOOMER_ON);
+        star->blueBoom();
     }
 }
 void Buttons::blue_longPressStop(void)
@@ -212,7 +213,7 @@ void Buttons::blue_longPressStop(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Blue Long Stop");
-        star->goBoomAbort(2, true);
+        star->goBoomAbort(Star::STAR_BLUE, true);
     }
 }
 
@@ -221,20 +222,20 @@ void Buttons::yellow_click(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Yellow Click");
-        star->yellowPoof(star->YELLOW_POOF);
+        star->yellowPoof();
     }
 }
 void Buttons::yellow_doubleClick(void)
 {
     Serial.println("Yellow Double Click");
-    star->yellowPoof(star->YELLOW_POOF_MULTI);
+    // star->yellowPoof(star->YELLOW_POOF_MULTI);
 }
 void Buttons::yellow_longPressStart(void)
 {
     if (!enable->isDrunktard())
     {
         Serial.println("Yellow Long Start");
-        star->yellowBoom(star->BOOMER_ON);
+        star->yellowBoom();
     }
 }
 void Buttons::yellow_longPressStop(void)
@@ -242,6 +243,6 @@ void Buttons::yellow_longPressStop(void)
     if (!enable->isDrunktard())
     {
         Serial.println("Yellow Long Stop");
-        star->goBoomAbort(3, true);
+        star->goBoomAbort(Star::STAR_YELLOW, true);
     }
 }

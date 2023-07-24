@@ -9,6 +9,7 @@
 #include <Arduino.h>
 #include "LightUtils.h"
 #include "Enable.h"
+#include "output/Star.h"
 
 void handleRequest(AsyncWebServerRequest *request)
 {
@@ -29,6 +30,20 @@ uint16_t controlMillis;
 uint16_t lightingBrightnessSlider, lightingSinSlider, lightingProgramSelect, lightingUpdatesSlider, lightingReverseSwitch, lightingFireSwitch, lightingLocalDisable;
 uint16_t mainDrunktardSwitch;
 uint16_t resetConfigSwitch, resetRebootSwitch;
+
+uint16_t pooferA1, pooferA2, pooferA3;
+uint16_t pooferB1, pooferB2, pooferB3;
+uint16_t pooferC1, pooferC2, pooferC3;
+uint16_t pooferD1, pooferD2, pooferD3;
+
+uint16_t boomerA1, boomerA2, boomerA3;
+uint16_t boomerB1, boomerB2, boomerB3;
+uint16_t boomerC1, boomerC2, boomerC3;
+uint16_t boomerD1, boomerD2, boomerD3;
+
+uint16_t sysInfoSeqIndex;
+
+uint16_t seqBoomAll, seqBoomLeftRight, seqBoomRightLeft;
 
 void numberCall(Control *sender, int type)
 {
@@ -66,6 +81,217 @@ void slider(Control *sender, int type)
 
 void buttonCallback(Control *sender, int type)
 {
+
+    /*
+     * Poofers
+     */
+    if (sender->id == pooferA1)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(0);
+        }
+    }
+    else if (sender->id == pooferA2)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(1);
+        }
+    }
+    else if (sender->id == pooferA3)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(2);
+        }
+    }
+    else if (sender->id == pooferB1)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(3);
+        }
+    }
+    else if (sender->id == pooferB2)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(4);
+        }
+    }
+    else if (sender->id == pooferB3)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(5);
+        }
+    }
+    else if (sender->id == pooferC1)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(6);
+        }
+    }
+    else if (sender->id == pooferC2)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(7);
+        }
+    }
+    else if (sender->id == pooferC3)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(8);
+        }
+    }
+    else if (sender->id == pooferD1)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(9);
+        }
+    }
+    else if (sender->id == pooferD2)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(10);
+        }
+    }
+    else if (sender->id == pooferD3)
+    {
+        if (type == B_DOWN)
+        {
+            star->poof(11);
+        }
+    }
+
+    /*
+     * Boomers
+     */
+    if (sender->id == boomerA1)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(0);
+        }
+    }
+    else if (sender->id == boomerA2)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(1);
+        }
+    }
+    else if (sender->id == boomerA3)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(2);
+        }
+    }
+    else if (sender->id == boomerB1)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(3);
+        }
+    }
+    else if (sender->id == boomerB2)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(4);
+        }
+    }
+    else if (sender->id == boomerB3)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(5);
+        }
+    }
+    else if (sender->id == boomerC1)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(6);
+        }
+    }
+    else if (sender->id == boomerC2)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(7);
+        }
+    }
+    else if (sender->id == boomerC3)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(8);
+        }
+    }
+    else if (sender->id == boomerD1)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(9);
+        }
+    }
+    else if (sender->id == boomerD2)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(10);
+        }
+    }
+    else if (sender->id == boomerD3)
+    {
+        if (type == B_DOWN)
+        {
+            star->boom(11);
+        }
+    }
+
+    if (sender->id == seqBoomAll)
+    {
+        if (type == B_DOWN)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                star->boom(i);
+            }
+        }
+    }
+    else if (sender->id == seqBoomLeftRight)
+    {
+        if (type == B_DOWN)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                star->boom(i);
+                delay(100);
+            }
+        }
+    }
+    else if (sender->id == seqBoomRightLeft)
+    {
+        if (type == B_DOWN)
+        {
+            for (int i = 11; i >= 0; i--)
+            {
+                star->boom(i);
+                delay(100);
+            }
+        }
+    }
+
+    /*
     switch (type)
     {
     case B_DOWN:
@@ -76,11 +302,7 @@ void buttonCallback(Control *sender, int type)
         Serial.println("Button UP");
         break;
     }
-}
-
-void buttonExample(Control *sender, int type, void *param)
-{
-    Serial.println(String("param: ") + String(long(param)));
+    */
 }
 
 void switchExample(Control *sender, int value)
@@ -168,26 +390,61 @@ void webSetup()
     // Add tabs
     uint16_t mainTab = ESPUI.addControl(ControlType::Tab, "Main", "Main");
     uint16_t settingsTab = ESPUI.addControl(ControlType::Tab, "Settings", "Settings");
+    uint16_t manualTab = ESPUI.addControl(ControlType::Tab, "Manual", "Manual");
     uint16_t sequencesTab = ESPUI.addControl(ControlType::Tab, "Sequences", "Sequences");
-    uint16_t programsTab = ESPUI.addControl(ControlType::Tab, "Programs", "Programs");
     uint16_t lightingTab = ESPUI.addControl(ControlType::Tab, "Lighting", "Lighting");
+    uint16_t sysInfoTab = ESPUI.addControl(ControlType::Tab, "System Info", "System Info");
     uint16_t resetTab = ESPUI.addControl(ControlType::Tab, "Reset", "Reset");
 
     // Add status label above all tabs
     status = ESPUI.addControl(ControlType::Label, "Status:", "Unknown Status", ControlColor::Turquoise);
 
-    //----- Tab 1 (Main) -----
+    //----- (Main) -----
     controlMillis = ESPUI.addControl(ControlType::Label, "Uptime", "0", ControlColor::Emerald, mainTab);
     mainDrunktardSwitch = ESPUI.addControl(ControlType::Switcher, "Drunktard", String(enable->isDrunktard()), ControlColor::None, mainTab, &switchExample);
 
-    //----- Tab 2 (Settings) -----
+    //----- (Settings) -----
     ESPUI.addControl(ControlType::Switcher, "Sleep (Disable)", "", ControlColor::None, settingsTab, &switchExample);
+
+    //----- (Manual) -----
+
+    pooferA1 = ESPUI.addControl(ControlType::Button, "Star Cluster - A", "Poof 1", ControlColor::Alizarin, manualTab, buttonCallback);
+    pooferA2 = ESPUI.addControl(ControlType::Button, "", "Poof 2", ControlColor::None, pooferA1, buttonCallback);
+    pooferA3 = ESPUI.addControl(ControlType::Button, "", "Poof 3", ControlColor::None, pooferA1, buttonCallback);
+
+    boomerA1 = ESPUI.addControl(ControlType::Button, "Star Cluster - A", "Boom 1", ControlColor::None, pooferA1, buttonCallback);
+    boomerA2 = ESPUI.addControl(ControlType::Button, "", "Boom 2", ControlColor::None, pooferA1, buttonCallback);
+    boomerA3 = ESPUI.addControl(ControlType::Button, "", "Boom 3", ControlColor::None, pooferA1, buttonCallback);
+
+    pooferB1 = ESPUI.addControl(ControlType::Button, "Star Cluster - B", "Poof 1", ControlColor::Emerald, manualTab, buttonCallback);
+    pooferB2 = ESPUI.addControl(ControlType::Button, "", "Poof 2", ControlColor::None, pooferB1, buttonCallback);
+    pooferB3 = ESPUI.addControl(ControlType::Button, "", "Poof 3", ControlColor::None, pooferB1, buttonCallback);
+
+    boomerB1 = ESPUI.addControl(ControlType::Button, "Star Cluster - B", "Boom 1", ControlColor::Emerald, pooferB1, buttonCallback);
+    boomerB2 = ESPUI.addControl(ControlType::Button, "", "Boom 2", ControlColor::None, pooferB1, buttonCallback);
+    boomerB3 = ESPUI.addControl(ControlType::Button, "", "Boom 3", ControlColor::None, pooferB1, buttonCallback);
+
+    pooferC1 = ESPUI.addControl(ControlType::Button, "Star Cluster - C", "Poof 1", ControlColor::Peterriver, manualTab, buttonCallback);
+    pooferC2 = ESPUI.addControl(ControlType::Button, "", "Poof 2", ControlColor::None, pooferC1, buttonCallback);
+    pooferC3 = ESPUI.addControl(ControlType::Button, "", "Poof 3", ControlColor::None, pooferC1, buttonCallback);
+
+    boomerC1 = ESPUI.addControl(ControlType::Button, "Star Cluster - C", "Boom 1", ControlColor::Peterriver, pooferC1, buttonCallback);
+    boomerC2 = ESPUI.addControl(ControlType::Button, "", "Boom 2", ControlColor::None, pooferC1, buttonCallback);
+    boomerC3 = ESPUI.addControl(ControlType::Button, "", "Boom 3", ControlColor::None, pooferC1, buttonCallback);
+
+    pooferD1 = ESPUI.addControl(ControlType::Button, "Star Cluster - D", "Poof 1", ControlColor::Carrot, manualTab, buttonCallback);
+    pooferD2 = ESPUI.addControl(ControlType::Button, "", "Poof 2", ControlColor::None, pooferD1, buttonCallback);
+    pooferD3 = ESPUI.addControl(ControlType::Button, "", "Poof 3", ControlColor::None, pooferD1, buttonCallback);
+
+    boomerD1 = ESPUI.addControl(ControlType::Button, "Star Cluster - D", "Boom 1", ControlColor::Carrot, pooferD1, buttonCallback);
+    boomerD2 = ESPUI.addControl(ControlType::Button, "", "Boom 2", ControlColor::None, pooferD1, buttonCallback);
+    boomerD3 = ESPUI.addControl(ControlType::Button, "", "Boom 3", ControlColor::None, pooferD1, buttonCallback);
 
     //---- Tab 3 (Sequences) -----
     switchOne = ESPUI.addControl(ControlType::Switcher, "Switch one", "", ControlColor::Alizarin, sequencesTab, &switchExample);
-    ESPUI.addControl(ControlType::Button, "Boomers", "All", ControlColor::Peterriver, sequencesTab, &buttonCallback);
-    ESPUI.addControl(ControlType::Button, "Boomers", "Left to Right", ControlColor::Peterriver, sequencesTab, &buttonCallback);
-    ESPUI.addControl(ControlType::Button, "Boomers", "Right to Left", ControlColor::Peterriver, sequencesTab, &buttonCallback);
+    seqBoomAll = ESPUI.addControl(ControlType::Button, "Boomers", "All", ControlColor::Peterriver, sequencesTab, &buttonCallback);
+    seqBoomLeftRight = ESPUI.addControl(ControlType::Button, "Boomers", "L to R (100ms)", ControlColor::Peterriver, seqBoomAll, &buttonCallback);
+    seqBoomRightLeft = ESPUI.addControl(ControlType::Button, "Boomers", "R to L (100ms)", ControlColor::Peterriver, seqBoomAll, &buttonCallback);
 
     //---- Tab -- Lighting
     lightingBrightnessSlider = ESPUI.addControl(ControlType::Slider, "Brightness", String(lightUtils->getCfgBrightness()), ControlColor::Alizarin, lightingTab, &slider);
@@ -215,6 +472,13 @@ void webSetup()
     ESPUI.addControl(ControlType::Option, "OceanColors_p", "18", ControlColor::Alizarin, lightingProgramSelect);
     ESPUI.addControl(ControlType::Option, "ForestColors_p", "19", ControlColor::Alizarin, lightingProgramSelect);
     ESPUI.addControl(ControlType::Option, "All White", "20", ControlColor::Alizarin, lightingProgramSelect);
+    ESPUI.addControl(ControlType::Option, "All Red", "21", ControlColor::Alizarin, lightingProgramSelect);
+    ESPUI.addControl(ControlType::Option, "All Green", "22", ControlColor::Alizarin, lightingProgramSelect);
+    ESPUI.addControl(ControlType::Option, "All Blue", "23", ControlColor::Alizarin, lightingProgramSelect);
+    ESPUI.addControl(ControlType::Option, "All Purple", "24", ControlColor::Alizarin, lightingProgramSelect);
+    ESPUI.addControl(ControlType::Option, "All Cyan", "25", ControlColor::Alizarin, lightingProgramSelect);
+    ESPUI.addControl(ControlType::Option, "All Yellow", "26", ControlColor::Alizarin, lightingProgramSelect);
+    ESPUI.addControl(ControlType::Option, "White Dot", "50", ControlColor::Alizarin, lightingProgramSelect);
 
     //    lightingUpdatesSlider = ESPUI.addControl(ControlType::Slider, "Updates Per Second", "100", ControlColor::Alizarin, lightingTab, &slider);
     lightingUpdatesSlider = ESPUI.addControl(ControlType::Slider, "Updates Per Second", String(lightUtils->getCfgUpdates()), ControlColor::Alizarin, lightingTab, &slider);
@@ -229,6 +493,9 @@ void webSetup()
     lightingReverseSwitch = ESPUI.addControl(ControlType::Switcher, "Reverse", String(lightUtils->getCfgReverse()), ControlColor::Alizarin, lightingTab, &switchExample);
     lightingFireSwitch = ESPUI.addControl(ControlType::Switcher, "Fire", String(lightUtils->getCfgFire()), ControlColor::Alizarin, lightingTab, &switchExample);
     lightingLocalDisable = ESPUI.addControl(ControlType::Switcher, "Local Disable", String(lightUtils->getCfgLocalDisable()), ControlColor::Alizarin, lightingTab, &switchExample);
+
+    // System Info Tab
+    sysInfoSeqIndex = ESPUI.addControl(ControlType::Label, "Button Sequence Index", "Red: 0, Green: 0, Blue: 0, Yellow: 0", ControlColor::Sunflower, sysInfoTab);
 
     // Reset tab
     ESPUI.addControl(ControlType::Label, "**WARNING**", "Don't even think of doing anything in this tab unless you want to break something!!", ControlColor::Sunflower, resetTab);
@@ -265,8 +532,8 @@ void webLoop()
 
     String formattedTime = String(days) + "d " + String(hours) + "h " + String(minutes) + "m " + String(seconds) + "s";
 
-    // Update controls every two second
-    if (millis() - oldTime > 2000)
+    // Update controls every second
+    if (millis() - oldTime > 1000)
     {
         // Toggle switch state
         switchState = !switchState;
@@ -300,5 +567,8 @@ void webLoop()
                 ESPUI.updateControlValue(status, "System Disabled (Emergency Stop)");
             }
         }
+
+        String sequenceString = "Red: " + String(star->sequenceRed) + ", Green: " + String(star->sequenceGreen) + "<br>Blue: " + String(star->sequenceBlue) + ", Yellow: " + String(star->sequenceYellow);
+        ESPUI.updateControlValue(sysInfoSeqIndex, sequenceString);
     }
 }

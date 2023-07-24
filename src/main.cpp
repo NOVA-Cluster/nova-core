@@ -48,7 +48,7 @@ AsyncWebServer webServer(80);
 
 void setup()
 {
-  delay(500);
+  delay(100);
   Serial.begin(921600);
   Serial.println("NOVA: CORE");
   Serial.print("setup() is running on core ");
@@ -153,31 +153,31 @@ void setup()
   Serial.println("Setting up Webserver - Done");
 
   Serial.println("Create TaskEnable");
-  xTaskCreate(&TaskEnable, "TaskEnable", 2048, NULL, 5, NULL);
+  xTaskCreate(&TaskEnable, "TaskEnable", 3 * 1024, NULL, 1, NULL);
   Serial.println("Create TaskEnable - Done");
 
   Serial.println("Create TaskWeb");
-  xTaskCreate(&TaskWeb, "TaskWeb", 4096, NULL, 5, NULL);
+  xTaskCreate(&TaskWeb, "TaskWeb", 10 * 1024, NULL, 5, NULL);
   Serial.println("Create TaskWeb - Done");
 
   Serial.println("Create TaskModes");
-  xTaskCreate(&TaskModes, "TaskModes", 4096, NULL, 5, NULL);
+  xTaskCreate(&TaskModes, "TaskModes", 4 * 1024, NULL, 10, NULL);
   Serial.println("Create TaskModes - Done");
 
   Serial.println("Create TaskButtons");
-  xTaskCreate(&TaskButtons, "TaskButtons", 4096, NULL, 5, NULL);
+  xTaskCreate(&TaskButtons, "TaskButtons", 4 * 1024, NULL, 5, NULL);
   Serial.println("Create TaskButtons - Done");
 
   Serial.println("Create TaskMDNS");
-  xTaskCreate(&TaskMDNS, "TaskMDNS", 4098, NULL, 5, NULL);
+  xTaskCreate(&TaskMDNS, "TaskMDNS", 3 * 1024, NULL, 1, NULL);
   Serial.println("Create TaskMDNS - Done");
 
   Serial.println("Create TaskAmbient");
-  xTaskCreate(&TaskAmbient, "TaskAmbient", 6 * 1024, NULL, 5, NULL);
+  xTaskCreate(&TaskAmbient, "TaskAmbient", 7 * 1024, NULL, 5, NULL);
   Serial.println("Create TaskAmbient - Done");
 
   Serial.println("Create LightUtils");
-  xTaskCreate(&TaskLightUtils, "LightUtils", 6 * 4096, NULL, 5, NULL);
+  xTaskCreate(&TaskLightUtils, "LightUtils", 3 * 1024, NULL, 5, NULL);
   Serial.println("Create LightUtils - Done");
 
   Serial.println("Setup Complete");
@@ -188,6 +188,7 @@ void loop()
   /* Best not to have anything in this loop.
       Everything should be in freeRTOS tasks
   */
+  delay(1);
 }
 
 /*--------------------------------------------------*/
@@ -198,23 +199,25 @@ void TaskAmbient(void *pvParameters) // This is a task.
 {
   (void)pvParameters;
   UBaseType_t uxHighWaterMark;
+  TaskHandle_t xTaskHandle = xTaskGetCurrentTaskHandle();
+  const char *pcTaskName = pcTaskGetName(xTaskHandle);
 
   Serial.println("TaskAmbient is running");
   while (1) // A Task shall never return or exit.
   {
     ambient->loop();
-    yield(); // Should't do anything but it's here incase the watchdog needs it.
+    // yield(); // Should't do anything but it's here incase the watchdog needs it.
     delay(1);
 
-    // Set this to 'true' to print stack high watermark
-    if (0)
+    static uint32_t lastExecutionTime = 0;
+    if (millis() - lastExecutionTime >= REPORT_TASK_INTERVAL)
     {
       /* Calling the function will have used some stack space, we would
           therefore now expect uxTaskGetStackHighWaterMark() to return a
           value lower than when it was called on entering the task. */
       uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.print("TaskAmbient stack free - ");
-      Serial.println(uxHighWaterMark);
+      Serial.printf("%s stack free - %d running on core %d\n", pcTaskName, uxHighWaterMark, xPortGetCoreID());
+      lastExecutionTime = millis();
     }
   }
 }
@@ -223,24 +226,26 @@ void TaskLightUtils(void *pvParameters) // This is a task.
 {
   (void)pvParameters;
   UBaseType_t uxHighWaterMark;
+  TaskHandle_t xTaskHandle = xTaskGetCurrentTaskHandle();
+  const char *pcTaskName = pcTaskGetName(xTaskHandle);
 
   Serial.println("TaskLightUtils is running");
   while (1) // A Task shall never return or exit.
   {
     lightUtils->loop();
+    // yield(); // Should't do anything but it's here incase the watchdog needs it.
     yield(); // Should't do anything but it's here incase the watchdog needs it.
-    yield(); // Should't do anything but it's here incase the watchdog needs it.
-    // delay(1);
+    delay(10);
 
-    // Set this to 'true' to print stack high watermark
-    if (0)
+    static uint32_t lastExecutionTime = 0;
+    if (millis() - lastExecutionTime >= REPORT_TASK_INTERVAL)
     {
       /* Calling the function will have used some stack space, we would
           therefore now expect uxTaskGetStackHighWaterMark() to return a
           value lower than when it was called on entering the task. */
       uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-      Serial.print("TaskLightUtils stack free - ");
-      Serial.println(uxHighWaterMark);
+      Serial.printf("%s stack free - %d running on core %d\n", pcTaskName, uxHighWaterMark, xPortGetCoreID());
+      lastExecutionTime = millis();
     }
   }
 }
@@ -248,46 +253,90 @@ void TaskLightUtils(void *pvParameters) // This is a task.
 void TaskEnable(void *pvParameters) // This is a task.
 {
   (void)pvParameters;
+  UBaseType_t uxHighWaterMark;
+  TaskHandle_t xTaskHandle = xTaskGetCurrentTaskHandle();
+  const char *pcTaskName = pcTaskGetName(xTaskHandle);
 
   Serial.println("TaskEnable is running");
   while (1) // A Task shall never return or exit.
   {
     enable->loop();
     yield(); // Should't do anything but it's here incase the watchdog needs it.
-    delay(5);
+    delay(50);
+
+    static uint32_t lastExecutionTime = 0;
+    if (millis() - lastExecutionTime >= REPORT_TASK_INTERVAL)
+    {
+      /* Calling the function will have used some stack space, we would
+          therefore now expect uxTaskGetStackHighWaterMark() to return a
+          value lower than when it was called on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.printf("%s stack free - %d running on core %d\n", pcTaskName, uxHighWaterMark, xPortGetCoreID());
+      lastExecutionTime = millis();
+    }
   }
 }
 
 void TaskWeb(void *pvParameters) // This is a task.
 {
   (void)pvParameters;
+  UBaseType_t uxHighWaterMark;
+  TaskHandle_t xTaskHandle = xTaskGetCurrentTaskHandle();
+  const char *pcTaskName = pcTaskGetName(xTaskHandle);
 
   Serial.println("TaskWeb is running");
   while (1) // A Task shall never return or exit.
   {
     webLoop();
     yield(); // Should't do anything but it's here incase the watchdog needs it.
-    delay(5);
+    delay(1);
+
+    static uint32_t lastExecutionTime = 0;
+    if (millis() - lastExecutionTime >= REPORT_TASK_INTERVAL)
+    {
+      /* Calling the function will have used some stack space, we would
+          therefore now expect uxTaskGetStackHighWaterMark() to return a
+          value lower than when it was called on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.printf("%s stack free - %d running on core %d\n", pcTaskName, uxHighWaterMark, xPortGetCoreID());
+      lastExecutionTime = millis();
+    }
   }
 }
 
 void TaskMDNS(void *pvParameters) // This is a task.
 {
   (void)pvParameters;
+  UBaseType_t uxHighWaterMark;
+  TaskHandle_t xTaskHandle = xTaskGetCurrentTaskHandle();
+  const char *pcTaskName = pcTaskGetName(xTaskHandle);
 
   Serial.println("TaskMDNS is running");
   while (1) // A Task shall never return or exit.
   {
     dnsServer.processNextRequest();
     yield(); // Should't do anything but it's here incase the watchdog needs it.
-    delay(5);
+    delay(10);
+
+    static uint32_t lastExecutionTime = 0;
+    if (millis() - lastExecutionTime >= REPORT_TASK_INTERVAL)
+    {
+      /* Calling the function will have used some stack space, we would
+          therefore now expect uxTaskGetStackHighWaterMark() to return a
+          value lower than when it was called on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.printf("%s stack free - %d running on core %d\n", pcTaskName, uxHighWaterMark, xPortGetCoreID());
+      lastExecutionTime = millis();
+    }
   }
 }
 
 void TaskModes(void *pvParameters) // This is a task.
 {
   (void)pvParameters;
-
+  UBaseType_t uxHighWaterMark;
+  TaskHandle_t xTaskHandle = xTaskGetCurrentTaskHandle();
+  const char *pcTaskName = pcTaskGetName(xTaskHandle);
   Serial.println("TaskModes is running");
 
   while (1) // A Task shall never return or exit.
@@ -307,14 +356,27 @@ void TaskModes(void *pvParameters) // This is a task.
     }
     yield(); // Should't do anything but it's here incase the watchdog needs it.
     delay(5);
-    //  Do something
+
+    static uint32_t lastExecutionTime = 0;
+    if (millis() - lastExecutionTime >= REPORT_TASK_INTERVAL)
+    {
+      /* Calling the function will have used some stack space, we would
+          therefore now expect uxTaskGetStackHighWaterMark() to return a
+          value lower than when it was called on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.printf("%s stack free - %d running on core %d\n", pcTaskName, uxHighWaterMark, xPortGetCoreID());
+
+      lastExecutionTime = millis();
+    }
   }
 }
 
 void TaskButtons(void *pvParameters) // This is a task.
 {
   (void)pvParameters;
-
+  UBaseType_t uxHighWaterMark;
+  TaskHandle_t xTaskHandle = xTaskGetCurrentTaskHandle();
+  const char *pcTaskName = pcTaskGetName(xTaskHandle);
   Serial.println("TaskButtons is running");
 
   while (1) // A Task shall never return or exit.
@@ -322,13 +384,25 @@ void TaskButtons(void *pvParameters) // This is a task.
     if (enable->isSystemEnabled())
     {
       buttons->loop();
-      yield(); // Should't do anything but it's here incase the watchdog needs it.
-      delay(5);
+      // yield(); // Should't do anything but it's here incase the watchdog needs it.
+      delay(2); // Don't go above 2. Buttons need to be responsive.
     }
     else
     {
       // If system is disabled, wait a long time before checking buttons again.
       delay(100);
+    }
+
+    static uint32_t lastExecutionTime = 0;
+    if (millis() - lastExecutionTime >= REPORT_TASK_INTERVAL)
+    {
+      /* Calling the function will have used some stack space, we would
+          therefore now expect uxTaskGetStackHighWaterMark() to return a
+          value lower than when it was called on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+      Serial.printf("%s stack free - %d running on core %d\n", pcTaskName, uxHighWaterMark, xPortGetCoreID());
+
+      lastExecutionTime = millis();
     }
   }
 }
