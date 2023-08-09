@@ -115,36 +115,62 @@ DEFINE_GRADIENT_PALETTE(white_dot){
 
 LightUtils::LightUtils()
 {
+    // Load the light configuration
+    Serial.println("LightUtils starting up...");
 
-    // delay( 1000 ); // power-up safety delay
+    Serial.println("Configuring FastLED");
     FastLED.addLeds<APA102, APA102_DATA, APA102_CLOCK, COLOR_ORDER, DATA_RATE_KHZ(2000)>(leds, NUM_LEDS);
     FastLED.setBrightness(getCfgBrightness());
+    // FastLED.setDither(0); // Disable dithering for faster performance and because we don't need it the DMX lights.
 
-    // Load the light configuration
-    currentPalette = getPalette(manager.get("cfgProgram").as<uint8_t>() ? manager.get("cfgProgram").as<uint8_t>() : 1);
+
+    Serial.println("Loading light configuration - currentPalette");
+    currentPalette = getPalette((manager.get("cfgProgram").as<uint8_t>() ? manager.get("cfgProgram").as<uint8_t>() : 1), false);
+
+    Serial.println("Loading light configuration - cfgSin");
     cfgSin = getCfgSin();
-    cfgUpdates = getCfgUpdates();
+
+    Serial.println("Loading light configuration - cfgUpdates");
+    cfgUpdates = getCfgUpdates() ? getCfgUpdates() : 30;
+
+    Serial.println("Loading light configuration - cfgFire");
     cfgFire = getCfgFire();
+
+    Serial.println("Loading light configuration - cfgReverse");
     cfgReverse = getCfgReverse();
-    
+
+    Serial.println("Loading light configuration - cfgAuto");
+    cfgAuto = getCfgAuto();
+
+    Serial.println("Loading light configuration - cfgAutoTime");
+    cfgAutoTime = getCfgAutoTime() ? getCfgAutoTime() : 30;
 
     // Setup goes in here
 }
 
 void LightUtils::loop()
 {
-    //    Serial.println("LightUtils::loop");
-    yield();
-    // Crossfade current palette slowly toward the target palette
-    //
-    // Each time that nblendPaletteTowardPalette is called, small changes
-    // are made to currentPalette to bring it closer to matching targetPalette.
-    // You can control how many changes are made in each call:
-    //   - the default of 24 is a good balance
-    //   - meaningful values are 1-48.  1=veeeeeeeery slow, 48=quickest
-    //   - "0" means do not change the currentPalette at all; freeze
+
+    static uint32_t lastAuto = 0;
+
+    if (cfgAuto)
+    {
+        if (millis() - lastAuto > cfgAutoTime * 1000)
+        {
+            uint32_t randomPalette = random(1, 19);
+            Serial.print("Auto changing palette to : ");
+            Serial.println(randomPalette);
+
+            Serial.print("Next palette change in : ");
+            Serial.println(cfgAutoTime);
+
+            lastAuto = millis();
+            getPalette(randomPalette, false);
+        }
+    }
 
     uint8_t maxChanges = 12;
+    nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
     nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
 
     if (getCfgFire())
@@ -163,7 +189,8 @@ void LightUtils::loop()
     if (!getCfgLocalDisable())
     {
         FastLED.show();
-        FastLED.delay(1000 / cfgUpdates);
+        FastLED.delay(1000 / cfgUpdates); // Enables temporal dithering
+        // delay(1000 / cfgUpdates);
     }
     else
     {
@@ -173,6 +200,11 @@ void LightUtils::loop()
     }
 }
 
+/**
+ * Fills the LED strip with colors from the current palette starting at the given color index.
+ *
+ * @param colorIndex The starting index in the current palette.
+ */
 void LightUtils::FillLEDsFromPaletteColors(uint8_t colorIndex)
 {
     uint8_t brightness = getCfgBrightness();
@@ -211,19 +243,26 @@ void LightUtils::FillLEDsFromPaletteColors(uint8_t colorIndex)
     }
 }
 
-CRGBPalette16 LightUtils::getPalette(uint32_t paletteSelect)
+CRGBPalette16 LightUtils::getPalette(uint32_t paletteSelect, bool saveSelection)
 {
 
     cfgProgram = paletteSelect;
 
-    manager.set("cfgProgram", cfgProgram);
-    if (manager.save())
+    if (saveSelection)
     {
-        Serial.println("Data saved successfully.");
+        manager.set("cfgProgram", cfgProgram);
+        if (manager.save())
+        {
+            Serial.println("Data saved successfully.");
+        }
+        else
+        {
+            Serial.println("Failed to save data.");
+        }
     }
     else
     {
-        Serial.println("Failed to save data.");
+        Serial.println("Not saving palette selection");
     }
 
     switch (paletteSelect)
@@ -446,6 +485,11 @@ void LightUtils::Fire2012WithPalette(void)
     }
 }
 
+/**
+ * Sets the brightness of the LED strip and saves the value to the configuration file.
+ *
+ * @param brightness The brightness value to set.
+ */
 void LightUtils::setCfgBrightness(uint8_t brightness)
 {
     Serial.println("set brightness");
@@ -461,9 +505,14 @@ void LightUtils::setCfgBrightness(uint8_t brightness)
     {
         Serial.println("Failed to save data.");
     }
-    manager.printFileContents();
+    //manager.printFileContents();
 }
 
+/**
+ * Sets the number of updates per second for the LED strip and saves the value to the configuration file.
+ *
+ * @param updates The number of updates per second to set.
+ */
 void LightUtils::setCfgUpdates(uint16_t updates)
 {
     cfgUpdates = updates;
@@ -478,6 +527,25 @@ void LightUtils::setCfgUpdates(uint16_t updates)
     }
 }
 
+void LightUtils::setCfgAutoTime(uint32_t autoTime)
+{
+    cfgAutoTime = autoTime;
+    manager.set("cfgAutoTime", autoTime);
+    if (manager.save())
+    {
+        Serial.println("Data saved successfully.");
+    }
+    else
+    {
+        Serial.println("Failed to save data.");
+    }
+}
+
+/**
+ * Sets the sine value for the LED strip and saves the value to the configuration file.
+ *
+ * @param sin The sine value to set.
+ */
 void LightUtils::setCfgSin(uint8_t sin)
 {
     cfgSin = sin;
@@ -492,11 +560,21 @@ void LightUtils::setCfgSin(uint8_t sin)
     }
 }
 
+/**
+ * Sets the current LED program based on the given program index and retrieves the corresponding color palette.
+ *
+ * @param program The index of the LED program to set.
+ */
 void LightUtils::setCfgProgram(uint8_t program)
 {
-    getPalette(program);
+    getPalette(program, true);
 }
 
+/**
+ * Sets the reverse flag for the LED strip and saves the value to the configuration file.
+ *
+ * @param reverse The reverse flag value to set.
+ */
 void LightUtils::setCfgReverse(bool reverse)
 {
     cfgReverse = reverse;
@@ -511,6 +589,25 @@ void LightUtils::setCfgReverse(bool reverse)
     }
 }
 
+void LightUtils::setCfgAuto(bool autoLight)
+{
+    cfgAuto = autoLight;
+    manager.set("cfgAuto", autoLight);
+    if (manager.save())
+    {
+        Serial.println("Data saved successfully.");
+    }
+    else
+    {
+        Serial.println("Failed to save data.");
+    }
+}
+
+/**
+ * Sets the fire flag for the LED strip and saves the value to the configuration file.
+ *
+ * @param fire The fire flag value to set.
+ */
 void LightUtils::setCfgFire(bool fire)
 {
     cfgFire = fire;
@@ -525,6 +622,11 @@ void LightUtils::setCfgFire(bool fire)
     }
 }
 
+/**
+ * Sets the local disable flag for the LED strip and saves the value to the configuration file.
+ *
+ * @param localDisable The local disable flag value to set.
+ */
 void LightUtils::setCfgLocalDisable(bool localDisable)
 {
     cfgLocalDisable = localDisable;
@@ -539,36 +641,81 @@ void LightUtils::setCfgLocalDisable(bool localDisable)
     }
 }
 
+/**
+ * Retrieves the brightness value from the configuration file.
+ *
+ * @return The brightness value.
+ */
 uint8_t LightUtils::getCfgBrightness(void)
 {
     return manager.get("cfgBrightness").as<uint8_t>();
 }
 
+/**
+ * Retrieves the number of updates from the configuration file.
+ *
+ * @return The number of updates.
+ */
 uint16_t LightUtils::getCfgUpdates(void)
 {
     return manager.get("cfgUpdates").as<uint16_t>();
 }
 
+/**
+ * Retrieves the sine value from the configuration file.
+ *
+ * @return The sine value.
+ */
 uint8_t LightUtils::getCfgSin(void)
 {
     return manager.get("cfgSin").as<uint8_t>();
 }
 
+/**
+ * Retrieves the LED program index from the configuration file.
+ *
+ * @return The LED program index.
+ */
 uint8_t LightUtils::getCfgProgram(void)
 {
     return manager.get("cfgProgram").as<uint8_t>();
 }
 
+uint32_t LightUtils::getCfgAutoTime(void)
+{
+    return manager.get("cfgAutoTime").as<uint32_t>();
+}
+
+/**
+ * Retrieves the reverse flag from the configuration file.
+ *
+ * @return The reverse flag value.
+ */
 bool LightUtils::getCfgReverse(void)
 {
     return manager.get("cfgReverse").as<bool>();
 }
 
+bool LightUtils::getCfgAuto(void)
+{
+    return manager.get("cfgAuto").as<bool>();
+}
+
+/**
+ * Retrieves the fire flag from the configuration file.
+ *
+ * @return The fire flag value.
+ */
 bool LightUtils::getCfgFire(void)
 {
     return manager.get("cfgFire").as<bool>();
 }
 
+/**
+ * Retrieves the local disable flag from the configuration file.
+ *
+ * @return The local disable flag value.
+ */
 bool LightUtils::getCfgLocalDisable(void)
 {
     return manager.get("cfgLocalDisable").as<bool>();

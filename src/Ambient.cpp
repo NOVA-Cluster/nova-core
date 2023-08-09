@@ -34,22 +34,23 @@ Ambient::Ambient()
 void Ambient::loop()
 {
     uint32_t currentTime = millis();
+    static uint32_t amnesiaLastTime = 0;
+    bool sendAmnesia = false;
+
+    if (currentTime - amnesiaLastTime >= 5 * 1000)
+    {
+        sendAmnesia = true;
+        amnesiaLastTime = currentTime;
+    }
+    else
+    {
+        sendAmnesia = false;
+    }
 
     // Serial.println("Ambient loop");
     // sendProtobuf();
 
     CRGB *leds = lightUtils->getLeds();
-
-    /*
-    for (int i = 0; i < lightUtils->getNumberOfLeds(); i++)
-    {
-        CRGB color = leds[i];
-        uint8_t redValue = color.r;
-        uint8_t greenValue = color.g;
-        uint8_t blueValue = color.b;
-        // Do something with the color
-    }
-    */
 
     uint32_t frameTime = micros();
 
@@ -68,7 +69,7 @@ void Ambient::loop()
         {
 
             dmxValues[0] = 0x00; // Always 0x00 (other values are reserved)
-            //for (int lightsPreIndex = 0; lightsPreIndex < lightsPre; lightsPreIndex++)
+            // for (int lightsPreIndex = 0; lightsPreIndex < lightsPre; lightsPreIndex++)
             for (int lightsPreIndex = lightsPre; lightsPreIndex >= 0; lightsPreIndex--)
             {
                 dmxValues[1 + (7 * lightsPreIndex)] = 0xff;               // Brightness
@@ -86,7 +87,7 @@ void Ambient::loop()
         {
             dmxValues[0] = 0x00; // Always 0x00 (other values are reserved)
             for (int lightsPostIndex = 0; lightsPostIndex <= lightsPost; lightsPostIndex++)
-            //for (int lightsPostIndex = lightsPost - 1; lightsPostIndex >= 0; lightsPostIndex--)
+            // for (int lightsPostIndex = lightsPost - 1; lightsPostIndex >= 0; lightsPostIndex--)
             {
                 dmxValues[1 + (7 * lightsPostIndex)] = 0xff;               // Brightness
                 dmxValues[2 + (7 * lightsPostIndex)] = leds[dmxFixture].r; // red
@@ -97,7 +98,7 @@ void Ambient::loop()
                 dmxValues[7 + (7 * lightsPostIndex)] = 0x00;               // null
 
                 dmxFixture++;
-                //Serial.println("dmxFixture");
+                // Serial.println("dmxFixture");
             }
         }
         else
@@ -116,10 +117,10 @@ void Ambient::loop()
             dmxFixture++;
         }
 
-        sendDmxMessage(dmxValues, DMX512_MAX);
+        sendDmxMessage(dmxValues, DMX512_MAX, sendAmnesia);
     }
 
-    if (currentTime - lastExecutionTime >= 60 * 1000)
+    if (currentTime - lastExecutionTime >= 20 * 1000)
     {
         // Calculate average frame time
         unsigned long avgFrameTime = totalFrameTime / numFrames;
@@ -148,7 +149,7 @@ void Ambient::loop()
  * @param dmxValues The DMX values to send.
  * @param dmxValuesSize The size of the DMX values array.
  */
-void Ambient::sendDmxMessage(uint8_t *dmxValues, size_t dmxValuesSize)
+void Ambient::sendDmxMessage(uint8_t *dmxValues, size_t dmxValuesSize, bool sendAmnesia)
 {
 
     uint8_t newDmxValues[dmxValuesSize] = {};
@@ -170,20 +171,20 @@ void Ambient::sendDmxMessage(uint8_t *dmxValues, size_t dmxValuesSize)
         }
     }
 
-/*
-    if (0)
-    {
-        Serial.println(lastIndexWithData);
-        for (int i = 0; i < lastIndexWithData; i++)
+    /*
+        if (0)
         {
-            Serial.print("newDmxValues[");
-            Serial.print(i);
-            Serial.print("] = ");
-            Serial.println((int)newDmxValues[i]);
+            Serial.println(lastIndexWithData);
+            for (int i = 0; i < lastIndexWithData; i++)
+            {
+                Serial.print("newDmxValues[");
+                Serial.print(i);
+                Serial.print("] = ");
+                Serial.println((int)newDmxValues[i]);
+            }
+            delay(10000);
         }
-        delay(10000);
-    }
-*/
+    */
 
     dmxRequest.values.size = lastIndexWithData;
 
@@ -195,6 +196,12 @@ void Ambient::sendDmxMessage(uint8_t *dmxValues, size_t dmxValuesSize)
     request.request_payload.dmx_request = dmxRequest;
     request.which_request_payload = messaging_Request_dmx_request_tag;
 
+    // TODO: This shouldn't be here. Needs to be higher up in the stack.
+    if (sendAmnesia)
+    {
+        runAmnesiaCode(request);
+    }
+
     // Initialize a buffer stream for the encoded message
     uint8_t buffer[NOVABUF_MAX];
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
@@ -205,24 +212,26 @@ void Ambient::sendDmxMessage(uint8_t *dmxValues, size_t dmxValuesSize)
         // Encode error. Maybe the buffer isn't big enough?
         Serial.println("PB_Encode Error!!!");
     }
-/*
-    if (0)
-    {
-        // Print the size of the encoded message.
-        Serial.println(stream.bytes_written);
 
-        // Print the encoded message in hexadecimal format.
-        for (size_t i = 0; i < stream.bytes_written; i++)
+    //        Serial.println(stream.bytes_written);
+
+    /*
+        if (0)
         {
-            if (buffer[i] < 16)
+            // Print the size of the encoded message.
+
+            // Print the encoded message in hexadecimal format.
+            for (size_t i = 0; i < stream.bytes_written; i++)
             {
-                Serial.print('0'); // print leading zero for single-digit hex values
+                if (buffer[i] < 16)
+                {
+                    Serial.print('0'); // print leading zero for single-digit hex values
+                }
+                Serial.print(buffer[i], HEX);
             }
-            Serial.print(buffer[i], HEX);
+            Serial.println();
         }
-        Serial.println();
-    }
-*/
+    */
     // Calculate the CRC of the protobuf
     uint16_t protobuf_crc = crc16_ccitt(buffer, stream.bytes_written);
 
@@ -256,74 +265,74 @@ void Ambient::sendDmxMessage(uint8_t *dmxValues, size_t dmxValuesSize)
 
     // delay(100); // Wait a bit before reading
     return;
-/*
-    if (0)
-    {
-
-        // Read and check the header
-        uint8_t received_header[4];
-        while (Serial2.available() < sizeof(received_header))
+    /*
+        if (0)
         {
-            // Wait until the header has been received
-            yield();
-        }
-        Serial2.readBytes((char *)received_header, sizeof(received_header));
-        if (memcmp(received_header, header, sizeof(header)) != 0)
-        {
-            // Handle the error: invalid header
-            return;
-        }
 
-        // Read the CRC of the protobuf
-        uint16_t received_protobuf_crc;
-        while (Serial2.available() < sizeof(received_protobuf_crc))
-        {
-            // Wait until the CRC has been received
-            yield();
+            // Read and check the header
+            uint8_t received_header[4];
+            while (Serial2.available() < sizeof(received_header))
+            {
+                // Wait until the header has been received
+                yield();
+            }
+            Serial2.readBytes((char *)received_header, sizeof(received_header));
+            if (memcmp(received_header, header, sizeof(header)) != 0)
+            {
+                // Handle the error: invalid header
+                return;
+            }
+
+            // Read the CRC of the protobuf
+            uint16_t received_protobuf_crc;
+            while (Serial2.available() < sizeof(received_protobuf_crc))
+            {
+                // Wait until the CRC has been received
+                yield();
+            }
+            Serial2.readBytes((char *)&received_protobuf_crc, sizeof(received_protobuf_crc));
+
+            // Read the size of the received protobuf
+            while (Serial2.available() < sizeof(msg_size))
+            {
+                // Wait until the size has been received
+                yield();
+            }
+            uint16_t received_size;
+            Serial2.readBytes((char *)&received_size, sizeof(received_size));
+
+            // Wait until the entire protobuf has been received
+            while (Serial2.available() < received_size)
+            {
+                // Wait
+                yield();
+            }
+
+            // Now read the protobuf
+            uint8_t received_buffer[NOVABUF_MAX];
+            Serial2.readBytes((char *)received_buffer, received_size);
+
+            // Calculate the CRC of the received protobuf
+            uint16_t calculated_protobuf_crc = crc16_ccitt(received_buffer, received_size);
+            if (received_protobuf_crc != calculated_protobuf_crc)
+            {
+                // Handle the error: invalid CRC
+                return;
+            }
+
+            // Initialize a protobuf input stream
+            pb_istream_t pb_istream = pb_istream_from_buffer(received_buffer, received_size);
+
+            // Decode the received protobuf
+            messaging_Request received_msg = messaging_Request_init_zero;
+            if (!pb_decode(&pb_istream, messaging_Request_fields, &received_msg))
+            {
+                // Handle the decoding error
+            }
         }
-        Serial2.readBytes((char *)&received_protobuf_crc, sizeof(received_protobuf_crc));
-
-        // Read the size of the received protobuf
-        while (Serial2.available() < sizeof(msg_size))
-        {
-            // Wait until the size has been received
-            yield();
-        }
-        uint16_t received_size;
-        Serial2.readBytes((char *)&received_size, sizeof(received_size));
-
-        // Wait until the entire protobuf has been received
-        while (Serial2.available() < received_size)
-        {
-            // Wait
-            yield();
-        }
-
-        // Now read the protobuf
-        uint8_t received_buffer[NOVABUF_MAX];
-        Serial2.readBytes((char *)received_buffer, received_size);
-
-        // Calculate the CRC of the received protobuf
-        uint16_t calculated_protobuf_crc = crc16_ccitt(received_buffer, received_size);
-        if (received_protobuf_crc != calculated_protobuf_crc)
-        {
-            // Handle the error: invalid CRC
-            return;
-        }
-
-        // Initialize a protobuf input stream
-        pb_istream_t pb_istream = pb_istream_from_buffer(received_buffer, received_size);
-
-        // Decode the received protobuf
-        messaging_Request received_msg = messaging_Request_init_zero;
-        if (!pb_decode(&pb_istream, messaging_Request_fields, &received_msg))
-        {
-            // Handle the decoding error
-        }
-    }
-    */
+        */
 }
-
+/*
 bool encode_callback(pb_ostream_t *stream, const pb_field_t *field, void *const *arg)
 {
     uint8_t *dmxValues = (uint8_t *)(*arg);
@@ -333,7 +342,17 @@ bool encode_callback(pb_ostream_t *stream, const pb_field_t *field, void *const 
     }
     return pb_encode_string(stream, dmxValues, 512);
 }
+*/
 
+/**
+ * Calculates the CRC-16-CCITT checksum for the given data.
+ *
+ * This function calculates the CRC-16-CCITT checksum for the given data using the polynomial x^16 + x^12 + x^5 + 1.
+ *
+ * @param data The data to calculate the checksum for.
+ * @param length The length of the data in bytes.
+ * @return The calculated CRC-16-CCITT checksum.
+ */
 // CRC-16-CCITT function
 uint16_t Ambient::crc16_ccitt(const uint8_t *data, uint16_t length)
 {
@@ -360,4 +379,136 @@ uint16_t Ambient::crc16_ccitt(const uint8_t *data, uint16_t length)
     }
 
     return crc; // Return the final CRC value
+}
+
+/**
+ * Runs the amnesia code for the given messaging request.
+ *
+ * @param request The messaging request to run the amnesia code for.
+ *
+ * TODO: This needs to run for the entire frame, not just every 200ms.
+ *
+ */
+void Ambient::runAmnesiaCode(messaging_Request &request)
+{
+    uint32_t currentTime = millis();
+
+    // Run this every 200ms
+    request.has_configAmnesia = true;
+
+    // Important: Ensure the min is not greater than max
+    uint32_t fogOffMin = getFogOutputOffMinTime() ? getFogOutputOffMinTime() : 5000;
+    uint32_t fogOffMax = getFogOutputOffMaxTime() ? getFogOutputOffMaxTime() : 20000;
+    uint32_t fogOnMin = getFogOutputOnMinTime() ? getFogOutputOnMinTime() : 200;
+    uint32_t fogOnMax = getFogOutputOnMaxTime() ? getFogOutputOnMaxTime() : 1000;
+
+    // Safety
+    if (fogOffMax < fogOffMin)
+    {
+        fogOffMax = fogOffMin;
+    }
+
+    if (fogOnMax < fogOnMin)
+    {
+        fogOnMax = fogOnMin;
+    }
+
+    request.configAmnesia.fogOutputOffMinTime = fogOffMin;
+    request.configAmnesia.fogOutputOffMaxTime = fogOffMax;
+
+    request.configAmnesia.fogOutputOnMinTime = fogOnMin;
+    request.configAmnesia.fogOutputOnMaxTime = fogOnMax;
+
+    // request.configAmnesia.fogActivateTime = 123456;
+
+    //        Serial.printf("fogOffMin: %lu\n", fogOffMin);
+    //        Serial.printf("fogOffMax: %lu\n", fogOffMax);
+    //        Serial.printf("fogOnMin: %lu\n", fogOnMin);
+    //        Serial.printf("fogOnMax: %lu\n", fogOnMax);
+
+    // amnesiaLastTime = currentTime;
+
+    //Serial.println("Including amnesia code");
+
+    // Send the request here
+}
+
+bool Ambient::setFogOutputOffMinTime(uint32_t time)
+{
+    manager.set("fogOutputOffMinTime", time);
+    if (manager.save())
+    {
+        Serial.println("Data saved successfully.");
+        return 1;
+    }
+    else
+    {
+        Serial.println("Failed to save data.");
+        return 0;
+    }
+}
+
+bool Ambient::setFogOutputOffMaxTime(uint32_t time)
+{
+    manager.set("fogOutputOffMaxTime", time);
+    if (manager.save())
+    {
+        Serial.println("Data saved successfully.");
+        return 1;
+    }
+    else
+    {
+        Serial.println("Failed to save data.");
+        return 0;
+    }
+}
+
+bool Ambient::setFogOutputOnMinTime(uint32_t time)
+{
+    manager.set("fogOutputOnMinTime", time);
+    if (manager.save())
+    {
+        Serial.println("Data saved successfully.");
+        return 1;
+    }
+    else
+    {
+        Serial.println("Failed to save data.");
+        return 0;
+    }
+}
+
+bool Ambient::setFogOutputOnMaxTime(uint32_t time)
+{
+    manager.set("fogOutputOnMaxTime", time);
+    if (manager.save())
+    {
+        Serial.println("Data saved successfully.");
+        return 1;
+    }
+    else
+    {
+        Serial.println("Failed to save data.");
+        return 0;
+    }
+}
+
+uint32_t Ambient::getFogOutputOffMinTime(void)
+{
+    return manager.get("fogOutputOffMinTime").as<uint32_t>();
+}
+
+uint32_t Ambient::getFogOutputOffMaxTime(void)
+{
+    return manager.get("fogOutputOffMaxTime").as<uint32_t>();
+}
+
+uint32_t Ambient::getFogOutputOnMinTime(void)
+{
+    return manager.get("fogOutputOnMinTime").as<uint32_t>();
+}
+
+uint32_t Ambient::getFogOutputOnMaxTime(void)
+{
+    return manager.get("fogOutputOnMaxTime").as<uint32_t>();
 }

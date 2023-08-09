@@ -10,6 +10,7 @@
 #include "LightUtils.h"
 #include "Enable.h"
 #include "output/Star.h"
+#include "Ambient.h"
 
 void handleRequest(AsyncWebServerRequest *request)
 {
@@ -27,7 +28,7 @@ uint16_t switchOne;
 uint16_t status;
 uint16_t controlMillis;
 
-uint16_t lightingBrightnessSlider, lightingSinSlider, lightingProgramSelect, lightingUpdatesSlider, lightingReverseSwitch, lightingFireSwitch, lightingLocalDisable;
+uint16_t lightingBrightnessSlider, lightingSinSlider, lightingProgramSelect, lightingUpdatesSlider, lightingReverseSwitch, lightingFireSwitch, lightingLocalDisable, lightingAuto, lightingAutoTime;
 uint16_t mainDrunktardSwitch;
 uint16_t resetConfigSwitch, resetRebootSwitch;
 
@@ -41,9 +42,14 @@ uint16_t boomerB1, boomerB2, boomerB3;
 uint16_t boomerC1, boomerC2, boomerC3;
 uint16_t boomerD1, boomerD2, boomerD3;
 
+uint16_t starManualPoof, starManualBlow, starManuallowFuel, starManualFuel, starManualZap, starManualSelect;
+uint8_t starManualSelectValue = 0;
+
 uint16_t sysInfoSeqIndex;
 
 uint16_t seqBoomAll, seqBoomLeftRight, seqBoomRightLeft;
+
+uint16_t fogOutputOffMinTime, fogOutputOffMaxTime, fogOutputOnMinTime, fogOutputOnMaxTime;
 
 void numberCall(Control *sender, int type)
 {
@@ -69,13 +75,37 @@ void slider(Control *sender, int type)
     {
         lightUtils->setCfgBrightness(sender->value.toInt());
     }
-    if (sender->id == lightingSinSlider)
+    else if (sender->id == lightingSinSlider)
     {
         lightUtils->setCfgSin(sender->value.toInt());
     }
-    if (sender->id == lightingUpdatesSlider)
+    else if (sender->id == lightingUpdatesSlider)
     {
         lightUtils->setCfgUpdates(sender->value.toInt());
+    }
+    else if (sender->id == fogOutputOffMinTime)
+    {
+        ambient->setFogOutputOffMinTime(sender->value.toInt());
+    }
+    else if (sender->id == fogOutputOffMaxTime)
+    {
+        ambient->setFogOutputOffMaxTime(sender->value.toInt());
+    }
+    else if (sender->id == fogOutputOnMinTime)
+    {
+        ambient->setFogOutputOnMinTime(sender->value.toInt());
+    }
+    else if (sender->id == fogOutputOnMaxTime)
+    {
+        ambient->setFogOutputOnMaxTime(sender->value.toInt());
+    }
+    else if (sender->id == lightingAutoTime)
+    {
+        lightUtils->setCfgAutoTime(sender->value.toInt());
+    }
+    else
+    {
+        Serial.println("Unknown slider");
     }
 }
 
@@ -291,18 +321,82 @@ void buttonCallback(Control *sender, int type)
         }
     }
 
-    /*
-    switch (type)
+    if (sender->id == starManualPoof)
     {
-    case B_DOWN:
-        Serial.println("Button DOWN");
-        break;
+        switch (type)
+        {
+        case B_DOWN:
+            Serial.println("Poof DOWN");
+            // novaIO->mcp_digitalWrite(cluster.stars[20].blowerOutput, HIGH, cluster.stars[20].expander);
+            star->manualPoof(starManualSelectValue, HIGH);
+            break;
 
-    case B_UP:
-        Serial.println("Button UP");
-        break;
+        case B_UP:
+            Serial.println("Poof UP");
+            star->manualPoof(starManualSelectValue, LOW);
+            break;
+        }
     }
-    */
+    else if (sender->id == starManualBlow)
+    {
+        switch (type)
+        {
+        case B_DOWN:
+            Serial.println("Blow DOWN");
+            star->manualBlow(starManualSelectValue, HIGH);
+            break;
+
+        case B_UP:
+            Serial.println("Blow UP");
+            star->manualBlow(starManualSelectValue, LOW);
+            break;
+        }
+    }
+    else if (sender->id == starManuallowFuel)
+    {
+        switch (type)
+        {
+        case B_DOWN:
+            Serial.println("Blow DOWN");
+            star->manualBlowFuel(starManualSelectValue, HIGH);
+            break;
+
+        case B_UP:
+            Serial.println("Blow UP");
+            star->manualBlowFuel(starManualSelectValue, LOW);
+            break;
+        }
+    }
+    else if (sender->id == starManualFuel)
+    {
+        switch (type)
+        {
+        case B_DOWN:
+            Serial.println("Fuel DOWN");
+            star->manualFuel(starManualSelectValue, HIGH);
+            break;
+
+        case B_UP:
+            Serial.println("Fuel UP");
+            star->manualFuel(starManualSelectValue, LOW);
+            break;
+        }
+    }
+    else if (sender->id == starManualZap)
+    {
+        switch (type)
+        {
+        case B_DOWN:
+            Serial.println("Zap DOWN");
+            star->manualZap(starManualSelectValue, HIGH);
+            break;
+
+        case B_UP:
+            Serial.println("Zap UP");
+            star->manualZap(starManualSelectValue, LOW);
+            break;
+        }
+    }
 }
 
 void switchExample(Control *sender, int value)
@@ -321,6 +415,10 @@ void switchExample(Control *sender, int value)
     {
 
         lightUtils->setCfgLocalDisable(sender->value.toInt());
+    }
+    else if (sender->id == lightingAuto)
+    {
+        lightUtils->setCfgAuto(sender->value.toInt());
     }
     else if (sender->id == mainDrunktardSwitch)
     {
@@ -352,9 +450,14 @@ void switchExample(Control *sender, int value)
         {
             // Todo:
             //    - Give the user a chance to cancel the reboot.
-            Serial.println("Rebooting device from switch...");
+            Serial.println("Rebooting device from web switch...");
+            delay(50);
             ESP.restart();
         }
+    }
+    else
+    {
+        Serial.println("Unknown Switch");
     }
 
     switch (value)
@@ -383,6 +486,10 @@ void selectExample(Control *sender, int value)
     {
         lightUtils->setCfgProgram(sender->value.toInt());
     }
+    else if (sender->id == starManualSelect)
+    {
+        starManualSelectValue = sender->value.toInt();
+    }
 }
 
 void webSetup()
@@ -393,6 +500,7 @@ void webSetup()
     uint16_t manualTab = ESPUI.addControl(ControlType::Tab, "Manual", "Manual");
     uint16_t sequencesTab = ESPUI.addControl(ControlType::Tab, "Sequences", "Sequences");
     uint16_t lightingTab = ESPUI.addControl(ControlType::Tab, "Lighting", "Lighting");
+    uint16_t fogTab = ESPUI.addControl(ControlType::Tab, "Fog", "Fog");
     uint16_t sysInfoTab = ESPUI.addControl(ControlType::Tab, "System Info", "System Info");
     uint16_t resetTab = ESPUI.addControl(ControlType::Tab, "Reset", "Reset");
 
@@ -439,6 +547,34 @@ void webSetup()
     boomerD1 = ESPUI.addControl(ControlType::Button, "Star Cluster - D", "Boom 1", ControlColor::Carrot, pooferD1, buttonCallback);
     boomerD2 = ESPUI.addControl(ControlType::Button, "", "Boom 2", ControlColor::None, pooferD1, buttonCallback);
     boomerD3 = ESPUI.addControl(ControlType::Button, "", "Boom 3", ControlColor::None, pooferD1, buttonCallback);
+
+    starManualPoof = ESPUI.addControl(ControlType::Button, "Star Manual", "Poof", ControlColor::Carrot, manualTab, buttonCallback);
+    starManualBlow = ESPUI.addControl(ControlType::Button, "Star Manual", "Blow", ControlColor::Carrot, starManualPoof, buttonCallback);
+    starManualFuel = ESPUI.addControl(ControlType::Button, "Star Manual", "Fuel", ControlColor::Carrot, starManualPoof, buttonCallback);
+    starManuallowFuel = ESPUI.addControl(ControlType::Button, "Star Manual", "Blow & Fuel", ControlColor::Carrot, starManualPoof, buttonCallback);
+    starManualZap = ESPUI.addControl(ControlType::Button, "Star Manual", "Zap", ControlColor::Carrot, starManualPoof, buttonCallback);
+
+    starManualSelect = ESPUI.addControl(ControlType::Select, "Star 1", String(starManualSelectValue), ControlColor::Alizarin, starManualPoof, &selectExample);
+    ESPUI.addControl(ControlType::Option, "Star 1", "0", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 2", "1", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 3", "2", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 4", "3", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 5", "4", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 6", "5", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 7", "6", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 8", "7", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 9", "8", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 10", "9", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 11", "10", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 12", "11", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 13", "12", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 14", "13", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 15", "14", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 16", "15", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 17", "16", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 18", "17", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 19", "18", ControlColor::Alizarin, starManualSelect);
+    ESPUI.addControl(ControlType::Option, "Star 20", "19", ControlColor::Alizarin, starManualSelect);
 
     //---- Tab 3 (Sequences) -----
     switchOne = ESPUI.addControl(ControlType::Switcher, "Switch one", "", ControlColor::Alizarin, sequencesTab, &switchExample);
@@ -493,6 +629,31 @@ void webSetup()
     lightingReverseSwitch = ESPUI.addControl(ControlType::Switcher, "Reverse", String(lightUtils->getCfgReverse()), ControlColor::Alizarin, lightingTab, &switchExample);
     lightingFireSwitch = ESPUI.addControl(ControlType::Switcher, "Fire", String(lightUtils->getCfgFire()), ControlColor::Alizarin, lightingTab, &switchExample);
     lightingLocalDisable = ESPUI.addControl(ControlType::Switcher, "Local Disable", String(lightUtils->getCfgLocalDisable()), ControlColor::Alizarin, lightingTab, &switchExample);
+
+    lightingAuto = ESPUI.addControl(ControlType::Switcher, "Auto Light Program Selection", String(lightUtils->getCfgReverse()), ControlColor::Alizarin, lightingTab, &switchExample);
+    lightingAutoTime = ESPUI.addControl(ControlType::Slider, "Auto Time", String(lightUtils->getCfgAutoTime() ? lightUtils->getCfgAutoTime() : 30), ControlColor::Alizarin, lightingAuto, &slider);
+    ESPUI.addControl(Min, "", "1", None, fogOutputOffMinTime);
+    ESPUI.addControl(Max, "", "3600", None, fogOutputOffMinTime);
+
+    //--- Fog Tab ---
+
+    fogOutputOffMinTime = ESPUI.addControl(ControlType::Slider, "Off Time (default: 5000 / 20000)", String(ambient->getFogOutputOffMinTime() ? ambient->getFogOutputOffMinTime() : 5000), ControlColor::Alizarin, fogTab, &slider);
+    ESPUI.addControl(Min, "", "2000", None, fogOutputOffMinTime);
+    ESPUI.addControl(Max, "", "60000", None, fogOutputOffMinTime);
+
+    fogOutputOffMaxTime = ESPUI.addControl(ControlType::Slider, "", String(ambient->getFogOutputOffMaxTime() ? ambient->getFogOutputOffMaxTime() : 20000), ControlColor::Alizarin, fogOutputOffMinTime, &slider);
+    ESPUI.addControl(Min, "", "2000", None, fogOutputOffMaxTime);
+    ESPUI.addControl(Max, "", "60000", None, fogOutputOffMaxTime);
+
+    fogOutputOnMinTime = ESPUI.addControl(ControlType::Slider, "On Time (default: 200 / 1000)", String(ambient->getFogOutputOnMinTime() ? ambient->getFogOutputOnMinTime() : 200), ControlColor::Alizarin, fogTab, &slider);
+    ESPUI.addControl(Min, "", "200", None, fogOutputOnMinTime);
+    ESPUI.addControl(Max, "", "2000", None, fogOutputOnMinTime);
+
+    fogOutputOnMaxTime = ESPUI.addControl(ControlType::Slider, "", String(ambient->getFogOutputOnMaxTime() ? ambient->getFogOutputOnMaxTime() : 1000), ControlColor::Alizarin, fogOutputOnMinTime, &slider);
+    ESPUI.addControl(Min, "", "200", None, fogOutputOnMaxTime);
+    ESPUI.addControl(Max, "", "2000", None, fogOutputOnMaxTime);
+    /*
+     */
 
     // System Info Tab
     sysInfoSeqIndex = ESPUI.addControl(ControlType::Label, "Button Sequence Index", "Red: 0, Green: 0, Blue: 0, Yellow: 0", ControlColor::Sunflower, sysInfoTab);
