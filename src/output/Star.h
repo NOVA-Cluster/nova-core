@@ -16,7 +16,7 @@ private:
     uint32_t boomerTimeFuelOff = 200;
     uint32_t boomerTimeBomerBlowerOff = 30;
     uint32_t boomerTimeBomerZap = 100;
-    uint32_t boomerTimeExhaust = 4000;
+    uint32_t boomerTimeExhaust = 7000;
 
     struct boomerData
     {
@@ -48,18 +48,19 @@ private:
     };
     struct starStates
     {
-        //uint8_t cache_de;
+        // uint8_t cache_de;
         PooferButtonState pooferButtonState;
         BoomerButtonState boomerButtonState;
     };
 
     struct star
     {
+        bool disablePoofer;
+        bool disableBoomer;
         starStates starState;
         boomerData boomer;
         novaNet net;
         uint32_t pooferPreviousMillis;
-        uint32_t pooferCountsRemaining;
         uint8_t expander;
         uint8_t blowerOutput;
         uint8_t fuelOutput;
@@ -79,12 +80,10 @@ private:
     starCluster cluster;
 
 public:
-
     uint8_t sequenceRed = 0;
     uint8_t sequenceGreen = 0;
     uint8_t sequenceBlue = 0;
     uint8_t sequenceYellow = 0;
-
 
     enum RedButtonState
     {
@@ -148,7 +147,8 @@ public:
         BOOMER_BLOWER_EXHAUST_OFF       // Turn the exhaust off.
     };
 
-    enum StarColors {
+    enum StarColors
+    {
         STAR_RED,
         STAR_GREEN,
         STAR_BLUE,
@@ -202,9 +202,7 @@ public:
     void manualFuel(uint8_t star, bool state);
     void manualZap(uint8_t star, bool state);
 
-
-
-
+    uint32_t whatBoomerFullTime();
 };
 
 extern Star *star;
